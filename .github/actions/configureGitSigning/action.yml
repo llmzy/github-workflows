@@ -28,11 +28,11 @@ runs:
         echo "✓ .gnupg directory created and permissions set"
         
         echo "Step 2: Importing GPG key"
-        # Import the private key and verify
-        if ! echo "${{ inputs.private_key }}" | gpg --batch --import; then
-          echo "Failed to import GPG key"
-          exit 1
-        fi
+        # Kill any existing gpg-agent to ensure we start fresh
+        gpgconf --kill gpg-agent || true
+        
+        # Import the private key
+        echo "${{ inputs.private_key }}" | gpg --batch --import
         echo "✓ GPG key imported successfully"
         
         echo "Step 3: Getting key ID"
