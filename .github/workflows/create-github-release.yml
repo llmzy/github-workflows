@@ -22,6 +22,11 @@ on:
         type: boolean
         description: "Create a different markdown page for each topic."
         default: false
+      package-manager:
+        type: string
+        description: "Package manager to use (npm or yarn)"
+        default: "yarn"
+        required: false
 
 jobs:
   release:
@@ -29,7 +34,7 @@ jobs:
     steps:
       - name: Get Github user info
         id: github-user-info
-        uses: salesforcecli/github-workflows/.github/actions/getGithubUserInfo@main
+        uses: llmzy/salesforcecli-github-workflows/.github/actions/getGithubUserInfo@jps/npm-not-yarn
         with:
           SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
@@ -37,10 +42,10 @@ jobs:
         with:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
-      - uses: salesforcecli/github-workflows/.github/actions/getPreReleaseTag@main
+      - uses: llmzy/salesforcecli-github-workflows/.github/actions/getPreReleaseTag@jps/npm-not-yarn
         id: distTag
 
-      - name: Validate prerelease
+      - name: Fail if prerelease on main
         if: github.ref_name == 'main' && inputs.prerelease
         uses: actions/github-script@v7
         with:
@@ -69,12 +74,13 @@ jobs:
 
       - name: Generate oclif readme
         if: ${{ inputs.generate-readme }}
-        uses: salesforcecli/github-workflows/.github/actions/generateOclifReadme@main
+        uses: llmzy/salesforcecli-github-workflows/.github/actions/generateOclifReadme@jps/npm-not-yarn
         with:
           skip-on-empty: ${{ inputs.skip-on-empty }}
           pre-release: ${{ steps.prereleaseTag.outputs.tag && 'true' || 'false' }}
           pre-release-identifier: ${{ steps.prereleaseTag.outputs.tag }}
           multi: ${{ inputs.readme-multi }}
+          package-manager: ${{ inputs.package-manager }}
 
       - name: Conventional Changelog Action
         id: changelog
