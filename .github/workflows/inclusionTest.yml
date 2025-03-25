@@ -7,11 +7,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: salesforcecli/cli
+          repository: llmzy/cli
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
       - run: |
           yarn add ${{ github.repository }}#${{ github.sha }} --network-concurrency 1
           yarn pack:tarballs -t linux-x64 --no-xz

@@ -2,6 +2,37 @@
 
 Reusable workflows and actions
 
+## Fork Features and Changes
+
+This fork (`llmzy/github-workflows`) adds several key features and modifications to the original [salesforcecli/github-workflows](https://github.com/salesforcecli/github-workflows) project:
+
+### Package Manager Support
+
+- Added support for both npm and yarn package managers
+- New `package-manager` input parameter (default: "yarn") to specify which package manager to use
+- Automatic detection and use of the appropriate package manager commands
+
+### GitHub Packages Publishing
+
+- Added support for publishing to GitHub Packages Registry
+- New `publishToGithubPackages` input parameter (default: false)
+- New `scope` input parameter for package scoping (required when publishing to GitHub Packages)
+- Automatic configuration of npm/yarn for GitHub Packages authentication
+- Proper handling of GitHub Packages permissions and authentication tokens
+
+### Prerelease Handling
+
+- Enhanced prerelease handling with better validation
+- New validation to prevent prerelease creation on main branch
+- Improved prerelease tag management
+
+### Repository References
+
+- Updated action references to use the fork's repository
+- Maintained compatibility with original workflow structure while adding new features
+
+## Documentation
+
 > [!IMPORTANT]
 > Many of these workflows require a Personal Access Token to function.
 >
@@ -83,7 +114,7 @@ jobs:
 
 Plugins created by Salesforce teams can be signed automatically with `sign:true` if the repo is in [salesforcecli](https://github.com/salesforcecli) or [forcedotcom](https://github.com/forcedotcom) gitub organization.
 
-You'll need the CLI team to enable your repo for signing. Ask in https://salesforce-internal.slack.com/archives/C0298EE05PU
+You'll need the CLI team to enable your repo for signing. Ask in <https://salesforce-internal.slack.com/archives/C0298EE05PU>
 
 Plugin signing is not available outside of Salesforce. Your users can add your plugin to their allow list (`unsignedPluginAllowList.json`)
 
@@ -279,7 +310,7 @@ sandbox-nuts:
 > 1. you have NUTs on a plugin that uses a library
 > 2. you want to check changes to the library against those NUTs
 
-see https://github.com/forcedotcom/source-deploy-retrieve/blob/> e09d635a7b852196701e71a4b2fba401277da313/.github/workflows/test.yml#L25 for an example
+see <https://github.com/forcedotcom/source-deploy-retrieve/blob/>> e09d635a7b852196701e71a4b2fba401277da313/.github/workflows/test.yml#L25 for an example
 
 ### automerge
 

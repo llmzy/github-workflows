@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-node@v4
 
-      - uses: salesforcecli/github-workflows/.github/actions/versionInfo@main
+      - uses: llmzy/github-workflows/.github/actions/versionInfo@main
         id: version-info
         with:
           version: latest
@@ -27,7 +27,7 @@ jobs:
         env:
           STEPS_VERSION_INFO_VERSION: ${{ steps.version-info.outputs.version }}
 
-      - uses: salesforcecli/github-workflows/.github/actions/get-json-property@main
+      - uses: llmzy/github-workflows/.github/actions/get-json-property@main
         id: packageVersion
         with:
           path: "package.json"
@@ -50,11 +50,11 @@ jobs:
 
       - name: Get Github user info
         id: github-user-info
-        uses: salesforcecli/github-workflows/.github/actions/getGithubUserInfo@main
+        uses: llmzy/github-workflows/.github/actions/getGithubUserInfo@main
         with:
           SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
-      - uses: salesforcecli/github-workflows/.github/actions/gitConfig@main
+      - uses: llmzy/github-workflows/.github/actions/gitConfig@main
         with:
           username: ${{ steps.github-user-info.outputs.username }}
           email: ${{ steps.github-user-info.outputs.email }}
@@ -91,7 +91,7 @@ jobs:
           git commit -m 'chore: updates from devScripts' --no-verify
           git push origin --no-verify
       # sometimes pr can't create immediately
-      - uses: salesforcecli/github-workflows/.github/actions/retry@main
+      - uses: llmzy/github-workflows/.github/actions/retry@main
         with:
           max_attempts: 5
           command: |

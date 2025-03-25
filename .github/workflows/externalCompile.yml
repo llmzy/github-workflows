@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       externalProjectGitUrl:
-        description: "The url that will be cloned.  This contains the code you want to compile.  Ex: https://github.com/salesforcecli/plugin-user"
+        description: "The url that will be cloned.  This contains the code you want to compile.  Ex: https://github.com/llmzy/plugin-user"
         type: string
         required: true
       command:
@@ -70,7 +70,7 @@ jobs:
           node-version: ${{ inputs.nodeVersion }}
 
       - name: Git clone
-        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        uses: llmzy/github-workflows/.github/actions/retry@main
         with:
           max_attempts: 20
           command: git clone -b "$INPUTS_BRANCH" --single-branch "$INPUTS_EXTERNAL_PROJECT_GIT_URL" $(pwd)
@@ -79,7 +79,7 @@ jobs:
           INPUTS_BRANCH: ${{ inputs.branch }}
           INPUTS_EXTERNAL_PROJECT_GIT_URL: ${{ inputs.externalProjectGitUrl }}
 
-      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
 
       - run: ${{ inputs.preSwapCommands }}
 

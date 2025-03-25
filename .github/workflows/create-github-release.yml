@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Get Github user info
         id: github-user-info
-        uses: llmzy/salesforcecli-github-workflows/.github/actions/getGithubUserInfo@jps/npm-not-yarn
+        uses: llmzy/github-workflows/.github/actions/getGithubUserInfo@main
         with:
           SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
@@ -42,7 +42,7 @@ jobs:
         with:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
-      - uses: llmzy/salesforcecli-github-workflows/.github/actions/getPreReleaseTag@jps/npm-not-yarn
+      - uses: llmzy/github-workflows/.github/actions/getPreReleaseTag@main
         id: distTag
 
       - name: Fail if prerelease on main
@@ -74,7 +74,7 @@ jobs:
 
       - name: Generate oclif readme
         if: ${{ inputs.generate-readme }}
-        uses: llmzy/salesforcecli-github-workflows/.github/actions/generateOclifReadme@jps/npm-not-yarn
+        uses: llmzy/github-workflows/.github/actions/generateOclifReadme@main
         with:
           skip-on-empty: ${{ inputs.skip-on-empty }}
           pre-release: ${{ steps.prereleaseTag.outputs.tag && 'true' || 'false' }}

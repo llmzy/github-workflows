@@ -35,7 +35,7 @@ runs:
 
     - name: Open CTC case
       id: ctc
-      uses: salesforcecli/github-workflows/.github/actions/retry@main
+      uses: llmzy/github-workflows/.github/actions/retry@main
       with:
         max_attempts: 5
         command: |
