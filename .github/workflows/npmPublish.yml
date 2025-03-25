@@ -179,7 +179,7 @@ jobs:
         if: inputs.package-manager == 'npm'
         run: npm run build
 
-      - run: npm install -g @salesforce/plugin-release-management
+      - run: npm install -g @llmzy/release-management
 
       - name: NPM Release
         run: |
