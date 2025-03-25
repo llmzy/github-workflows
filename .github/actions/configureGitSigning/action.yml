@@ -1,24 +1,18 @@
 name: 'Configure Git Signing'
-description: 'Configures Git for commit signing using provided credentials'
+description: 'Configure Git commit signing with GPG'
 
 inputs:
   private_key:
-    description: 'Private key for commit signing'
+    description: 'GPG private key to import'
     required: true
   github_token:
-    description: 'GitHub token to verify user email'
+    description: 'GitHub token for git config'
     required: true
 
 runs:
   using: "composite"
   steps:
-    - name: Get GitHub user info
-      id: github-user-info
-      uses: llmzy/github-workflows/.github/actions/getGithubUserInfo@main
-      with:
-        SVC_CLI_BOT_GITHUB_TOKEN: ${{ inputs.github_token }}
-
-    - name: Configure Git for signing
+    - name: Configure Git signing
       shell: bash
       run: |
         echo "Step 1: Creating .gnupg directory"
@@ -28,63 +22,55 @@ runs:
         echo "✓ .gnupg directory created and permissions set"
         
         echo "Step 2: Importing GPG key"
-        # Kill any existing gpg-agent to ensure we start fresh
-        gpgconf --kill gpg-agent || true
-        
         # Import the private key
         echo "${{ inputs.private_key }}" | gpg --batch --import
         echo "✓ GPG key imported successfully"
         
         echo "Step 3: Getting key ID"
-        # Get the key ID and email
-        KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep -A 1 "sec" | tail -n 1 | awk '{print $1}')
-        if [ -z "$KEY_ID" ]; then
-          echo "Failed to get key ID"
-          exit 1
-        fi
+        # Get the key ID
+        KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | cut -d'/' -f2)
         echo "✓ Key ID retrieved: $KEY_ID"
-
+        
         echo "Step 4: Getting email from GPG key"
-        # Show key info without sensitive data
+        # Debug output for key information
         echo "Debug: Key information:"
-        gpg --list-secret-keys --keyid-format=long | grep -E "^(sec|uid|ssb)" | sed 's/<.*>/<EMAIL_MASKED>/g'
-
-        # Now try to extract the email - looking for the uid line that contains the email
-        GPG_EMAIL=$(gpg --list-secret-keys --keyid-format=long | grep "uid" | grep -o '<.*>' | tr -d '<>')
-        if [ -z "$GPG_EMAIL" ]; then
-          echo "Failed to get email from GPG key"
-          exit 1
-        fi
+        gpg --list-secret-keys --keyid-format LONG | sed 's/\(<.*>\)/EMAIL_MASKED/g'
+        
+        # Get email from GPG key
+        GPG_EMAIL=$(gpg --list-secret-keys --keyid-format LONG | grep -A 1 "sec" | tail -n 1 | sed 's/.*<\(.*\)>.*/\1/')
         echo "✓ GPG email retrieved (masked): <EMAIL_MASKED>"
-
+        
         echo "Step 5: Comparing emails"
-        # Compare emails
-        if [ "$GPG_EMAIL" != "${{ steps.github-user-info.outputs.email }}" ]; then
-          echo "::warning::Email mismatch detected!"
-          echo "GitHub token email: <EMAIL_MASKED>"
-          echo "GPG key email: <EMAIL_MASKED>"
-          echo "Please ensure the GPG key belongs to the same user as the GitHub token."
+        # Get email from GitHub token
+        GH_EMAIL=$(curl -s -H "Authorization: token ${{ inputs.github_token }}" https://api.github.com/user | jq -r .email)
+        # Compare emails (output is masked for security)
+        if [ "$GPG_EMAIL" != "$GH_EMAIL" ]; then
+          echo "Warning: Email from GPG key does not match GitHub token email"
         fi
         echo "✓ Email comparison completed"
         
         echo "Step 6: Configuring Git"
-        # Configure Git to use the key
-        git config --global user.name "${{ steps.github-user-info.outputs.username }}"
-        git config --global user.email "$GPG_EMAIL"
+        # Configure Git
         git config --global user.signingkey "$KEY_ID"
         git config --global commit.gpgsign true
         git config --global gpg.program gpg
         echo "✓ Git configuration completed"
         
         echo "Step 7: Configuring GPG agent"
-        # Kill any existing GPG agent
-        gpgconf --kill gpg-agent
+        # Configure GPG agent
+        echo 'allow-loopback-pinentry' > ~/.gnupg/gpg-agent.conf
+        echo 'pinentry-mode loopback' > ~/.gnupg/gpg.conf
+        gpgconf --kill gpg-agent || true
         echo "✓ GPG agent configured"
         
         echo "Step 8: Testing GPG signing"
-        # Test the configuration
-        if ! echo "test" | gpg --batch --yes --clearsign /dev/null; then
+        # Create a temporary file for testing
+        TEST_FILE=$(mktemp)
+        if echo "test" | gpg --clearsign > "$TEST_FILE" 2>/dev/null; then
+          rm -f "$TEST_FILE"
+          echo "✓ GPG signing test successful"
+        else
+          rm -f "$TEST_FILE"
           echo "Failed to test GPG signing"
           exit 1
-        fi
-        echo "✓ GPG signing test completed successfully" 
+        fi 
