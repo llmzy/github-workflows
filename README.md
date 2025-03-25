@@ -73,7 +73,7 @@ This fork (`llmzy/github-workflows`) adds several key features and modifications
      - `LLMZY_CI_PRIVATE_KEY`: The contents of your private.asc file
        - On macOS, you can use: `cat private.asc | pbcopy`
        - Otherwise, open the file and copy its contents
-     - `LMZY_CI_EMAIL`: The email address associated with your GPG key
+     - `LLMZY_CI_EMAIL`: The email address associated with your GPG key
      - `SVC_CLI_BOT_GITHUB_TOKEN`: A GitHub PAT with repo access (if not already set)
 
 5. Clean up sensitive files and clipboard:
