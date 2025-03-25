@@ -7,17 +7,32 @@ runs:
     - name: Cleanup Git signing configuration
       shell: bash
       run: |
+        echo "Step 1: Removing Git configuration"
         # Remove all Git signing configuration
-        git config --global --unset user.signingkey
-        git config --global --unset commit.gpgsign
-        git config --global --unset gpg.program
-        git config --global --unset user.email
-        git config --global --unset user.name
+        git config --global --unset user.signingkey || true
+        git config --global --unset commit.gpgsign || true
+        git config --global --unset gpg.program || true
+        git config --global --unset user.email || true
+        git config --global --unset user.name || true
+        echo "✓ Git configuration removed"
+        
+        echo "Step 2: Cleaning up GPG configuration"
+        # Kill any existing gpg-agent first
+        gpgconf --kill gpg-agent || true
         
         # Clean up GPG configuration
-        rm -rf ~/.gnupg
+        if [ -d ~/.gnupg ]; then
+          rm -rf ~/.gnupg
+          echo "✓ GPG directory removed"
+        else
+          echo "✓ No GPG directory found to clean"
+        fi
         
+        echo "Step 3: Clearing environment"
         # Clear any sensitive environment variables
-        unset GPG_TTY
-        unset GPG_AGENT_INFO
-        unset GPG_KEY_ID 
+        unset GPG_TTY || true
+        unset GPG_AGENT_INFO || true
+        unset GPG_KEY_ID || true
+        echo "✓ Environment variables cleared"
+        
+        echo "All cleanup steps completed successfully" 
