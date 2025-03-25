@@ -1,0 +1,23 @@
+name: 'Cleanup Git Signing'
+description: 'Removes Git signing configuration and cleans up sensitive data'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cleanup Git signing configuration
+      shell: bash
+      run: |
+        # Remove all Git signing configuration
+        git config --global --unset user.signingkey
+        git config --global --unset commit.gpgsign
+        git config --global --unset gpg.program
+        git config --global --unset user.email
+        git config --global --unset user.name
+        
+        # Clean up GPG configuration
+        rm -rf ~/.gnupg
+        
+        # Clear any sensitive environment variables
+        unset GPG_TTY
+        unset GPG_AGENT_INFO
+        unset GPG_KEY_ID 

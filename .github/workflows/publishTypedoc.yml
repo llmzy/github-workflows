@@ -4,6 +4,12 @@ on:
       SVC_CLI_BOT_GITHUB_TOKEN:
         description: A Github PAT with repo write access.
         required: true
+      LMZY_CI_EMAIL:
+        description: Email address for Git commits
+        required: true
+      LLMZY_CI_PRIVATE_KEY:
+        description: Private key for Git commit signing
+        required: true
 
 jobs:
   publish:
@@ -28,10 +34,12 @@ jobs:
         with:
           SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
-      - uses: llmzy/github-workflows/.github/actions/gitConfig@main
+      - name: Configure Git signing
+        uses: llmzy/github-workflows/.github/actions/configureGitSigning@main
         with:
-          username: ${{ steps.github-user-info.outputs.username }}
-          email: ${{ steps.github-user-info.outputs.email }}
+          email: ${{ secrets.LMZY_CI_EMAIL }}
+          private_key: ${{ secrets.LLMZY_CI_PRIVATE_KEY }}
+          github_token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
       - name: Build docs
         run: |
@@ -47,3 +55,7 @@ jobs:
           git add .
           git commit -m 'docs: publishing gh-pages [skip ci]' --no-verify
           git push origin gh-pages --no-verify
+
+      - name: Cleanup Git signing
+        if: always()
+        uses: llmzy/github-workflows/.github/actions/cleanupGitSigning@main

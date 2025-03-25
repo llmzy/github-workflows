@@ -1,0 +1,75 @@
+name: 'Configure Git Signing'
+description: 'Configures Git for commit signing using provided credentials'
+
+inputs:
+  email:
+    description: 'Email address to use for Git commits'
+    required: true
+  private_key:
+    description: 'Private key for commit signing'
+    required: true
+  github_token:
+    description: 'GitHub token to verify user email'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get GitHub user info
+      id: github-user-info
+      uses: llmzy/github-workflows/.github/actions/getGithubUserInfo@main
+      with:
+        SVC_CLI_BOT_GITHUB_TOKEN: ${{ inputs.github_token }}
+
+    - name: Configure Git for signing
+      shell: bash
+      run: |
+        # Create .gnupg directory with correct permissions
+        mkdir -p ~/.gnupg
+        chmod 700 ~/.gnupg
+        
+        # Import the private key and verify
+        if ! echo "${{ inputs.private_key }}" | gpg --batch --import; then
+          echo "Failed to import GPG key"
+          exit 1
+        fi
+        
+        # Get the key ID and email
+        KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep -A 1 "sec" | tail -n 1 | awk '{print $1}')
+        if [ -z "$KEY_ID" ]; then
+          echo "Failed to get key ID"
+          exit 1
+        fi
+
+        # Get the email from the GPG key
+        GPG_EMAIL=$(gpg --list-secret-keys --keyid-format=long | grep -A 2 "uid" | tail -n 1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -o '<.*>' | tr -d '<>')
+        if [ -z "$GPG_EMAIL" ]; then
+          echo "Failed to get email from GPG key"
+          exit 1
+        fi
+
+        # Compare emails
+        if [ "$GPG_EMAIL" != "${{ inputs.email }}" ]; then
+          echo "::warning::Email mismatch detected!"
+          echo "GitHub token email: ${{ steps.github-user-info.outputs.email }}"
+          echo "GPG key email: $GPG_EMAIL"
+          echo "Configured email: ${{ inputs.email }}"
+          echo "Please ensure the GPG key belongs to the same user as the GitHub token."
+        fi
+        
+        # Configure Git to use the key
+        git config --global user.name "${{ steps.github-user-info.outputs.username }}"
+        git config --global user.email "${{ inputs.email }}"
+        git config --global user.signingkey "$KEY_ID"
+        git config --global commit.gpgsign true
+        git config --global gpg.program gpg
+        
+        # Configure GPG to use the system's pinentry program
+        echo "pinentry-program $(which pinentry)" > ~/.gnupg/gpg-agent.conf
+        gpgconf --kill gpg-agent
+        
+        # Test the configuration
+        if ! echo "test" | gpg --batch --yes --clearsign /dev/null; then
+          echo "Failed to test GPG signing"
+          exit 1
+        fi 
