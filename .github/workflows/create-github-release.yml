@@ -5,7 +5,7 @@ on:
       SVC_CLI_BOT_GITHUB_TOKEN:
         description: A Github PAT with repo write access.
         required: true
-      LMZY_CI_EMAIL:
+      LLMZY_CI_EMAIL:
         description: Email address for Git commits
         required: true
       LLMZY_CI_PRIVATE_KEY:
@@ -58,7 +58,7 @@ jobs:
       - name: Configure Git signing
         uses: llmzy/github-workflows/.github/actions/configureGitSigning@main
         with:
-          email: ${{ secrets.LMZY_CI_EMAIL }}
+          email: ${{ secrets.LLMZY_CI_EMAIL }}
           private_key: ${{ secrets.LLMZY_CI_PRIVATE_KEY }}
           github_token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
