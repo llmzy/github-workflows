@@ -130,7 +130,7 @@ jobs:
   ctc-open:
     needs: [check-publish]
     if: inputs.ctc && needs.check-publish.outputs.published == 'false'
-    uses: llmzy/salesforcecli-github-workflows/.github/workflows/ctcOpen.yml@jps/npm-not-yarn
+    uses: llmzy/github-workflows/.github/workflows/ctcOpen.yml@main
     secrets: inherit
 
   npm-publish:
@@ -164,7 +164,7 @@ jobs:
           registry-url: ${{ inputs.publishToGithubPackages && 'https://npm.pkg.github.com' || '' }}
           scope: ${{ inputs.scope }}
 
-      - uses: llmzy/salesforcecli-github-workflows/.github/actions/yarnInstallWithRetries@jps/npm-not-yarn
+      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
         if: inputs.package-manager == 'yarn'
 
       - name: npm install
@@ -200,7 +200,7 @@ jobs:
   ctcCloseSuccess:
     needs: [ctc-open, npm-publish]
     if: needs.ctc-open.result == 'success' && needs.npm-publish.result == 'success' && needs.ctc-open.outputs.changeCaseId
-    uses: llmzy/salesforcecli-github-workflows/.github/workflows/ctcClose.yml@jps/npm-not-yarn
+    uses: llmzy/github-workflows/.github/workflows/ctcClose.yml@main
     secrets: inherit
     with:
       changeCaseId: ${{needs.ctc-open.outputs.changeCaseId}}
@@ -208,7 +208,7 @@ jobs:
   ctcCloseFail:
     needs: [ctc-open, npm-publish]
     if: always() && inputs.ctc && needs.ctc-open.outputs.changeCaseId && (needs.ctc-open.result != 'success' || needs.npm-publish.result != 'success')
-    uses: llmzy/salesforcecli-github-workflows/.github/workflows/ctcClose.yml@jps/npm-not-yarn
+    uses: llmzy/github-workflows/.github/workflows/ctcClose.yml@main
     secrets: inherit
     with:
       changeCaseId: ${{ needs.ctc-open.outputs.changeCaseId }}

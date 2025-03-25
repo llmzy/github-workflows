@@ -19,7 +19,7 @@ on:
         required: true
         type: string
       externalProjectGitUrl:
-        description: "The url that will be cloned.  This contains the NUTs you want to run.  Ex: https://github.com/salesforcecli/plugin-user"
+        description: "The url that will be cloned.  This contains the NUTs you want to run.  Ex: https://github.com/llmzy/plugin-user"
         type: string
         required: true
       command:
@@ -93,14 +93,14 @@ jobs:
         with:
           node-version: ${{ inputs.nodeVersion }}
 
-      - uses: salesforcecli/github-workflows/.github/actions/retry@main
+      - uses: llmzy/github-workflows/.github/actions/retry@main
         name: cli install
         with:
           max_attempts: ${{ inputs.attempts }}
           command: npm install -g @salesforce/cli@nightly shx yarn-deduplicate --omit=dev
           timeout_minutes: 20
 
-      - uses: salesforcecli/github-workflows/.github/actions/retry@main
+      - uses: llmzy/github-workflows/.github/actions/retry@main
         name: git clone
         with:
           max_attempts: 20
@@ -117,7 +117,7 @@ jobs:
         env:
           cache-name: cache-node-modules
 
-      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
         if: ${{ steps.cache-nodemodules.outputs.cache-hit != 'true' }}
 
       - name: Run preSwapCommands
@@ -157,7 +157,7 @@ jobs:
           INPUTS_SF_EXECUTABLE_PATH: ${{ inputs.sfdxExecutablePath }}
 
       - name: NUTs with ${{ inputs.attempts }} attempts
-        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        uses: llmzy/github-workflows/.github/actions/retry@main
         with:
           max_attempts: ${{ inputs.attempts }}
           command: ${{ inputs.command }}

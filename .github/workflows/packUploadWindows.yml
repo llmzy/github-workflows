@@ -33,7 +33,7 @@ jobs:
       # TODO: It would be nice if we chould ditch homebrew for this install
       - run: brew install makensis
 
-      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
 
       - name: Pack for Windows
         run: yarn pack:win

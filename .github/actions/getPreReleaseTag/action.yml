@@ -12,7 +12,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: salesforcecli/github-workflows/.github/actions/get-json-property@main
+    - uses: llmzy/github-workflows/.github/actions/get-json-property@main
       id: package-version
       with:
         path: "package.json"
@@ -25,7 +25,7 @@ runs:
         STEPS_PACKAGE_VERSION_PROP: ${{ steps.package-version.outputs.prop }}
 
     - name: Parse semver version
-      uses: salesforcecli/github-workflows/.github/actions/parse-semver@main
+      uses: llmzy/github-workflows/.github/actions/parse-semver@main
       id: parsed
       with:
         input_string: ${{ steps.package-version.outputs.prop }}
