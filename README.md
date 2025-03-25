@@ -12,6 +12,86 @@ This fork (`llmzy/github-workflows`) adds several key features and modifications
 - New `package-manager` input parameter (default: "yarn") to specify which package manager to use
 - Automatic detection and use of the appropriate package manager commands
 
+### Git Commit Signing
+
+- Added support for signed Git commits in workflows
+- Automatic configuration of Git signing with GPG keys
+- Email verification to ensure GPG key matches GitHub token identity
+- Secure handling of private keys through GitHub Secrets
+
+#### Setting Up Git Commit Signing
+
+1. Generate a GPG key:
+
+   ```bash
+   gpg --full-generate-key
+   ```
+
+   - Choose RSA and RSA (default)
+   - Choose 4096 bits
+   - Choose how long the key should be valid
+     - Setting an expiration date is a security best practice
+     - You can extend the key's validity before it expires using `gpg --edit-key YOUR_EMAIL`
+     - If the key expires, you'll need to generate a new one and update the GitHub secrets
+   - Enter your name and email (should match your GitHub account email)
+   - Do not supply a passphrase as it would be necessary to store both in
+     GitHub secrets. We will delete the local copy in step 5.
+
+2. Export your private key:
+
+   ```bash
+   # First, list your keys to get the key ID
+   gpg --list-secret-keys --keyid-format=long YOUR_EMAIL
+   
+   # Then export the specific key using its ID
+   gpg --export-secret-keys --armor KEY_ID > private.asc
+   ```
+
+   - Replace `YOUR_EMAIL` with the email you used when creating the key
+   - Replace `KEY_ID` with the key ID from the list command (it will look like `ABCD1234EFGH5678`)
+   - The output will be in ASCII-armored format
+
+3. Export your public key and add it to GitHub:
+
+   ```bash
+   # Export the public key using the same key ID
+   gpg --export --armor KEY_ID > public.asc
+   ```
+
+   - Use the same `KEY_ID` from step 2
+   - Copy the contents of public.asc
+     - On macOS, you can use: `cat public.asc | pbcopy`
+     - Otherwise, open the file and copy its contents
+   - Go to GitHub Settings > SSH and GPG keys > New GPG key
+   - Paste the public key content
+   - Give it a descriptive title (e.g., "CI Workflow Signing Key")
+   - Click "Add GPG key"
+
+4. Add the secrets to your GitHub repository or organization:
+   - Go to your repository's Settings > Secrets and variables > Actions
+   - Add the following secrets:
+     - `LLMZY_CI_PRIVATE_KEY`: The contents of your private.asc file
+       - On macOS, you can use: `cat private.asc | pbcopy`
+       - Otherwise, open the file and copy its contents
+     - `LMZY_CI_EMAIL`: The email address associated with your GPG key
+     - `SVC_CLI_BOT_GITHUB_TOKEN`: A GitHub PAT with repo access (if not already set)
+
+5. Clean up sensitive files and clipboard:
+
+   ```bash
+   rm private.asc public.asc
+   echo | pbcopy
+   ```
+
+   - This removes the local copies of your keys
+   - The private key is now only stored securely in GitHub Secrets
+
+6. The workflows will automatically:
+   - Configure Git with your signing key
+   - Verify that the GPG key email matches your GitHub token identity
+   - Sign all commits made by the workflows
+   - Clean up the signing configuration after the workflow completes
+
 ### GitHub Packages Publishing
 
 - Added support for publishing to GitHub Packages Registry
