@@ -34,7 +34,7 @@ jobs:
           node-version: lts/*
           cache: npm
 
-      - run: npm install -g @salesforce/plugin-release-management --omit=dev
+      - run: npm install -g @llmzy/release-management --omit=dev
 
       - name: run automerge command
         run: sf-release dependabot:automerge --merge-method "$INPUTS_MERGE_METHOD" --max-version-bump "$INPUTS_MAX_VERSION_BUMP" --owner $GITHUB_REPOSITORY_OWNER --repo $(basename $GITHUB_REPOSITORY) ${{ inputs.skipCI && '--skip-ci' || '' }}
