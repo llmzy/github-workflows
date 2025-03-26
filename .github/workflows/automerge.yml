@@ -20,6 +20,16 @@ on:
         description: Optionally skip ci builds on merges into main
         type: boolean
         default: false
+      registryUrl:
+        required: false
+        description: "URL for the npm registry. Required when installing from GitHub Packages"
+        type: string
+        default: ""
+      scope:
+        required: false
+        description: "Scope for the package (e.g., @organization). Required when installing from GitHub Packages"
+        type: string
+        default: ""
 
 jobs:
   dependabot-automerge:
@@ -33,11 +43,13 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
+          registry-url: ${{ inputs.registryUrl }}
+          scope: ${{ inputs.scope }}
 
       - run: npm install -g @llmzy/release-management --omit=dev
 
       - name: run automerge command
-        run: sf-release dependabot:automerge --merge-method "$INPUTS_MERGE_METHOD" --max-version-bump "$INPUTS_MAX_VERSION_BUMP" --owner $GITHUB_REPOSITORY_OWNER --repo $(basename $GITHUB_REPOSITORY) ${{ inputs.skipCI && '--skip-ci' || '' }}
+        run: llmzy-release dependabot:automerge --merge-method "$INPUTS_MERGE_METHOD" --max-version-bump "$INPUTS_MAX_VERSION_BUMP" --owner $GITHUB_REPOSITORY_OWNER --repo $(basename $GITHUB_REPOSITORY) ${{ inputs.skipCI && '--skip-ci' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUTS_MERGE_METHOD: ${{ inputs.mergeMethod }}

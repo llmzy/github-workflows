@@ -158,7 +158,7 @@ on:
 
 jobs:
   release:
-    uses: salesforcecli/github-workflows/.github/workflows/create-github-release.yml@main
+    uses: llmzy/github-workflows/.github/workflows/create-github-release.yml@main
     secrets: inherit
     # you can also pass in values for the secrets
     # secrets:
@@ -179,7 +179,7 @@ on:
 
 jobs:
   my-publish:
-    uses: salesforcecli/github-workflows/.github/workflows/npmPublish.yml
+    uses: llmzy/github-workflows/.github/workflows/npmPublish.yml
     with:
       tag: latest
       githubTag: ${{ github.event.release.tag_name }}
@@ -187,6 +187,27 @@ jobs:
     # you can also pass in values for the secrets
     # secrets:
     #  NPM_TOKEN: ^&*$
+```
+
+### Publishing to GitHub Packages
+
+When using workflows that install packages from GitHub Packages (like `@llmzy/release-management`), you need to configure the registry and scope. Here are examples for all workflows:
+
+#### For npmPublish workflow
+
+```yml
+jobs:
+  my-publish:
+    uses: llmzy/github-workflows/.github/workflows/npmPublish.yml
+    with:
+      tag: latest
+      githubTag: ${{ github.event.release.tag_name }}
+      publishToGithubPackages: true
+      scope: "@myorg"
+    secrets: inherit
+    # When publishing to GitHub Packages, you need the SVC_CLI_BOT_GITHUB_TOKEN secret
+    # secrets:
+    #  SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 ```
 
 ### Plugin Signing
@@ -205,7 +226,7 @@ on:
 
 jobs:
   my-publish:
-    uses: salesforcecli/github-workflows/.github/workflows/npmPublish.yml
+    uses: llmzy/github-workflows/.github/workflows/npmPublish.yml
     with:
       sign: true
       tag: latest
@@ -254,7 +275,7 @@ on:
 
 jobs:
   release:
-    uses: salesforcecli/github-workflows/.github/workflows/create-github-release.yml@main
+    uses: llmzy/github-workflows/.github/workflows/create-github-release.yml@main
     secrets: inherit
     with:
       prerelease: ${{ inputs.prerelease }}
@@ -289,11 +310,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag  }}
-      - uses: salesforcecli/github-workflows/.github/actions/getPreReleaseTag@main
+      - uses: llmzy/github-workflows/.github/actions/getPreReleaseTag@main
         id: distTag
 
   npm:
-    uses: salesforcecli/github-workflows/.github/workflows/npmPublish.yml@main
+    uses: llmzy/github-workflows/.github/workflows/npmPublish.yml@main
     needs: [getDistTag]
     with:
       tag: ${{ needs.getDistTag.outputs.tag || 'latest' }}
@@ -315,7 +336,7 @@ on:
 
 jobs:
   release:
-    uses: salesforcecli/github-workflows/.github/workflows/githubRelease.yml@main
+    uses: llmzy/github-workflows/.github/workflows/githubRelease.yml@main
     secrets: inherit
 ```
 
@@ -327,7 +348,7 @@ on:
 
 jobs:
   my-publish:
-    uses: salesforcecli/github-workflows/.github/workflows/npmPublish.yml
+    uses: llmzy/github-workflows/.github/workflows/npmPublish.yml
     with:
       # ternary-ish https://github.com/actions/runner/issues/409#issuecomment-752775072
       # if the version is 2.x we release it on the `v2` dist tag
@@ -353,10 +374,10 @@ on:
 
 jobs:
   unit-tests:
-    uses: salesforcecli/github-workflows/.github/workflows/unitTest.yml@main
+    uses: llmzy/github-workflows/.github/workflows/unitTest.yml@main
   nuts:
     needs: unit-tests
-    uses: salesforcecli/github-workflows/.github/workflows/nut.yml@main
+    uses: llmzy/github-workflows/.github/workflows/nut.yml@main
     secrets: inherit
     strategy:
       matrix:
@@ -375,7 +396,7 @@ jobs:
 sandbox-nuts:
   needs: [nuts, unit-tests]
   if: contains(github.event.push.head_commit.message,'[sb-nuts]')
-  uses: salesforcecli/github-workflows/.github/workflows/nut.yml@main
+  uses: llmzy/github-workflows/.github/workflows/nut.yml@main
   secrets: inherit
   with:
     command: test:nuts:sandbox
@@ -408,7 +429,10 @@ on:
 
 jobs:
   automerge:
-    uses: salesforcecli/github-workflows/.github/workflows/automerge.yml@main
+    uses: llmzy/github-workflows/.github/workflows/automerge.yml@main
+    with:
+      registryUrl: 'https://npm.pkg.github.com'
+      scope: '@llmzy'
     # secrets are needed
     secrets: inherit
 ```
@@ -431,7 +455,7 @@ automerge:
 
 ```yml
 # inside steps
-- uses: salesforcecli/github-workflows/.github/actions/versionInfo@main
+- uses: llmzy/github-workflows/.github/actions/versionInfo@main
   id: version-info
   with:
     version: ${{ inputs.version }}
@@ -456,7 +480,7 @@ on:
 
 jobs:
   pr-validation:
-    uses: salesforcecli/github-workflows/.github/workflows/validatePR.yml@main
+    uses: llmzy/github-workflows/.github/workflows/validatePR.yml@main
 ```
 
 ### prNotification
@@ -488,5 +512,5 @@ jobs:
           PULL_REQUEST_REPO: ${{ github.event.pull_request.head.repo.name }}
           PULL_REQUEST_TITLE: ${{ github.event.pull_request.title }}
           PULL_REQUEST_URL: ${{ github.event.pull_request.html_url }}
-        uses: salesforcecli/github-workflows/.github/actions/prNotification@main
+        uses: llmzy/github-workflows/.github/actions/prNotification@main
 ```

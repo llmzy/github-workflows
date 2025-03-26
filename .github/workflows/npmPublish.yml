@@ -19,7 +19,7 @@ on:
         type: string
       sign:
         required: false
-        description: signs the package using sf-release if set to true
+        description: signs the package using llmzy-release if set to true
         default: false
         type: boolean
       dryrun:
@@ -157,7 +157,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
         with:
           node-version: ${{ inputs.nodeVersion }}
           cache: ${{ inputs.package-manager }}
@@ -183,7 +183,7 @@ jobs:
 
       - name: NPM Release
         run: |
-          sf-release npm:package:release \
+          llmzy-release npm:package:release \
             --githubtag "$INPUTS_GITHUB_TAG" \
             --npmtag "$INPUTS_TAG" \
             --no-install \
