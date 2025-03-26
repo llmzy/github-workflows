@@ -99,6 +99,13 @@ This fork (`llmzy/github-workflows`) adds several key features and modifications
 - Automatic configuration of npm/yarn for GitHub Packages authentication
 - Proper handling of GitHub Packages permissions and authentication tokens
 
+### Changelog Management
+
+- Added date-based changelog filtering with the new `first-release-date` parameter
+- Automatic counting of releases since a specified date for cleaner changelogs
+- Smart fallback to full history if no releases exist since the cutoff date
+- Compatible with both current and legacy GitHub release workflows
+
 ### Prerelease Handling
 
 - Enhanced prerelease handling with better validation
@@ -164,6 +171,22 @@ jobs:
     # secrets:
     #  SVC_CLI_BOT_GITHUB_TOKEN: gh_pat00000000
 ```
+
+#### Controlling Changelog Date Range
+
+You can now control how far back your changelog history goes by specifying a cutoff date. By default, all releases are kept in the changelog, but you can limit it to releases since a specific date:
+
+```yml
+jobs:
+  release:
+    uses: llmzy/github-workflows/.github/workflows/create-github-release.yml@main
+    secrets: inherit
+    with:
+      # Only include releases since January 1, 2023 in the changelog
+      first-release-date: "2023-01-01" 
+```
+
+This feature automatically counts the number of semver-compliant releases (git tags) since the specified date and passes the appropriate `release-count` to the changelog generator. This approach provides a cleaner way to maintain changelog history compared to manually setting a fixed release count.
 
 ### npmPublish
 

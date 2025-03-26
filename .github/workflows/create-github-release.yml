@@ -34,6 +34,10 @@ on:
         description: Path to an existing changelog file to use as base
         required: false
         type: string
+      first-release-date:
+        description: "If specified, only keep releases since this date (YYYY-MM-DD format)"
+        required: false
+        type: string
 
 jobs:
   release:
@@ -102,6 +106,14 @@ jobs:
           multi: ${{ inputs.readme-multi }}
           package-manager: ${{ inputs.package-manager }}
 
+      - name: Count releases since cutoff date
+        id: release-count
+        if: ${{ inputs.first-release-date != '' }}
+        uses: llmzy/github-workflows/.github/actions/countReleasesSinceDate@main
+        with:
+          cutoff-date: ${{ inputs.first-release-date }}
+          default-count: '0'
+
       - name: Conventional Changelog Action
         id: changelog
         uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765
@@ -110,8 +122,8 @@ jobs:
           git-user-email: ${{ steps.github-user-info.outputs.email }}
           github-token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           tag-prefix: ""
-          # Setting 'release-count' to 0 will keep ALL releases in the change log file (no pruning)
-          release-count: "0"
+          # Use calculated release count if available, otherwise keep all releases (0)
+          release-count: ${{ inputs.first-release-date != '' && steps.release-count.outputs.release-count || '0' }}
           skip-on-empty: ${{ inputs.skip-on-empty }}
           pre-release: ${{ steps.prereleaseTag.outputs.tag && 'true' || 'false' }}
           pre-release-identifier: ${{ steps.prereleaseTag.outputs.tag }}
