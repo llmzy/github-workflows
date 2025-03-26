@@ -22,6 +22,10 @@ on:
         required: false
         default: false
         description: use a prerelease instead of a regular release
+      input-file:
+        description: Path to an existing changelog file to use as base
+        required: false
+        type: string
 
 jobs:
   release:
@@ -50,7 +54,7 @@ jobs:
 
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@3a392e9aa44a72686b0fc13259a90d287dd0877c
+        uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765
         with:
           git-user-name: svc-cli-bot
           git-user-email: svc_cli_bot@salesforce.com
@@ -62,6 +66,7 @@ jobs:
           pre-release-identifier: ${{ steps.distTag.outputs.tag }}
           # ternary-ish: https://github.com/actions/runner/issues/409#issuecomment-752775072
           output-file: ${{ inputs.prerelease && 'false' || 'CHANGELOG.md' }} # If prerelease, do not write the changelog file
+          input-file: ${{ inputs.input-file }}
       - name: Create Github Release
         uses: actions/create-release@v1
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
