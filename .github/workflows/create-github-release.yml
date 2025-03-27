@@ -31,7 +31,7 @@ on:
         default: "yarn"
         required: false
       input-file:
-        description: Path to an existing changelog file to use as base
+        description: "Path to an existing changelog file to prepend, ignoring first-release-date"
         required: false
         type: string
       first-release-date:
@@ -129,6 +129,8 @@ jobs:
           pre-release-identifier: ${{ steps.prereleaseTag.outputs.tag }}
           # ternary-ish: https://github.com/actions/runner/issues/409#issuecomment-752775072
           output-file: ${{ steps.prereleaseTag.outputs.tag && 'false' || 'CHANGELOG.md' }} # If prerelease, do not write the changelog file
+          # Note that if input-file is specified, it will be used as the base changelog file
+          # and only one new changelog entry will be prepended to it.
           input-file: ${{ inputs.input-file }}
 
       - name: Create Github Release

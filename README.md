@@ -167,6 +167,10 @@ jobs:
   release:
     uses: llmzy/github-workflows/.github/workflows/create-github-release.yml@main
     secrets: inherit
+    with:
+      # Optional: Path to an existing changelog file to prepend
+      # If specified, only one new changelog entry will be prepended to this file
+      # input-file: CHANGELOG.md
     # you can also pass in values for the secrets
     # secrets:
     #  SVC_CLI_BOT_GITHUB_TOKEN: gh_pat00000000
