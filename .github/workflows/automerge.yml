@@ -40,6 +40,8 @@ jobs:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         with:
           node-version: lts/*
           cache: npm
@@ -48,9 +50,25 @@ jobs:
 
       - run: npm install -g @llmzy/release-management --omit=dev
 
+      - name: Get Github user info
+        id: github-user-info
+        uses: llmzy/github-workflows/.github/actions/getGithubUserInfo@main
+        with:
+          SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git signing
+        uses: llmzy/github-workflows/.github/actions/configureGitSigning@main
+        with:
+          private_key: ${{ secrets.LLMZY_CI_PRIVATE_KEY }}
+          github_token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+
       - name: run automerge command
         run: llmzy-release dependabot:automerge --merge-method "$INPUTS_MERGE_METHOD" --max-version-bump "$INPUTS_MAX_VERSION_BUMP" --owner $GITHUB_REPOSITORY_OWNER --repo $(basename $GITHUB_REPOSITORY) ${{ inputs.skipCI && '--skip-ci' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUTS_MERGE_METHOD: ${{ inputs.mergeMethod }}
           INPUTS_MAX_VERSION_BUMP: ${{ inputs.maxVersionBump }}
+
+      - name: Cleanup Git signing
+        if: always()
+        uses: llmzy/github-workflows/.github/actions/cleanupGitSigning@main
