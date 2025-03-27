@@ -194,6 +194,7 @@ jobs:
           INPUTS_GITHUB_TAG: ${{ inputs.githubTag }}
           INPUTS_TAG: ${{ inputs.tag }}
           NPM_TOKEN: ${{ inputs.publishToGithubPackages && secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.NPM_TOKEN }}
+          NPM_REGISTRY: ${{ inputs.publishToGithubPackages && 'https://npm.pkg.github.com' || 'https://registry.npmjs.org/' }}
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
 
