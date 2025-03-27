@@ -22,6 +22,14 @@ on:
         required: false
         default: false
         description: use a prerelease instead of a regular release
+      input-file:
+        description: Path to an existing changelog file to use as base
+        required: false
+        type: string
+      first-release-date:
+        description: "If specified, only keep releases since this date (YYYY-MM-DD format)"
+        required: false
+        type: string
 
 jobs:
   release:
@@ -48,20 +56,29 @@ jobs:
           script: |
             core.setFailed('Prerelease requires a dist tag name in your package.json like beta in 1.1.1-beta.0')
 
+      - name: Count releases since cutoff date
+        id: release-count
+        if: ${{ inputs.first-release-date != '' }}
+        uses: llmzy/github-workflows/.github/actions/countReleasesSinceDate@main
+        with:
+          cutoff-date: ${{ inputs.first-release-date }}
+          default-count: '0'
+
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@3a392e9aa44a72686b0fc13259a90d287dd0877c
+        uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765
         with:
           git-user-name: svc-cli-bot
           git-user-email: svc_cli_bot@salesforce.com
           github-token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           tag-prefix: ""
-          # Setting 'release-count' to 0 will keep ALL releases in the change log (no pruning)
-          release-count: "0"
+          # Use calculated release count if available, otherwise keep all releases (0)
+          release-count: ${{ inputs.first-release-date != '' && steps.release-count.outputs.release-count || '0' }}
           pre-release: ${{ inputs.prerelease }}
           pre-release-identifier: ${{ steps.distTag.outputs.tag }}
           # ternary-ish: https://github.com/actions/runner/issues/409#issuecomment-752775072
           output-file: ${{ inputs.prerelease && 'false' || 'CHANGELOG.md' }} # If prerelease, do not write the changelog file
+          input-file: ${{ inputs.input-file }}
       - name: Create Github Release
         uses: actions/create-release@v1
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
