@@ -53,6 +53,8 @@ runs:
         # Configure Git
         git config --global user.signingkey "$KEY_ID"
         git config --global commit.gpgsign true
+        git config --global tag.gpgsign true
+        git config --global tag.forceSignAnnotated true
         git config --global gpg.program gpg
         echo "✓ Git configuration completed"
         
