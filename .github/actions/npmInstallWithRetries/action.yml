@@ -10,4 +10,4 @@ runs:
     - name: npm install
       uses: llmzy/github-workflows/.github/actions/retry@main
       with:
-        command: npm install --network-timeout 600000 ${{ inputs.ignore-scripts == 'true' && '--ignore-scripts' || '' }} 
+        command: npm config set fetch-timeout 600000 && npm install ${{ inputs.ignore-scripts == 'true' && '--ignore-scripts' || '' }} 
