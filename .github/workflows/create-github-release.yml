@@ -50,9 +50,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: yarn
+          cache: ${{ inputs.package-manager }}
 
-      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - name: Install dependencies
+        if: inputs.package-manager == 'yarn'
+        uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
+
+      - name: Install dependencies
+        if: inputs.package-manager == 'npm'
+        uses: llmzy/github-workflows/.github/actions/npmInstallWithRetries@main
 
       - name: Get Github user info
         id: github-user-info
