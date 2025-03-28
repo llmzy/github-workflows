@@ -42,7 +42,16 @@ on:
         description: "Alternative git ref name to use instead of github.ref_name (useful for workflow_run events)"
         required: false
         type: string
-
+      publishToGithubPackages:
+        type: boolean
+        description: "If true, publish to GitHub Packages instead of npm"
+        default: false
+        required: false
+      scope:
+        type: string
+        description: "Scope for the package (e.g., @organization). Required if publishToGithubPackages is true"
+        required: false
+  
 jobs:
   release:
     runs-on: "ubuntu-latest"
@@ -58,16 +67,20 @@ jobs:
         env:
           INPUTS_GIT_REF_NAME: ${{ inputs.git_ref_name }}
           
+      - uses: actions/setup-node@v4
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}      
+        with:
+          node-version: lts/*
+          cache: ${{ inputs.package-manager }}
+          registry-url: ${{ inputs.publishToGithubPackages && 'https://npm.pkg.github.com' || '' }}
+          scope: ${{ inputs.scope }}
+
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           ref: ${{ steps.effective_ref.outputs.name }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: ${{ inputs.package-manager }}
-
+  
       - name: Install dependencies
         if: inputs.package-manager == 'yarn'
         uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
