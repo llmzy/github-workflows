@@ -38,14 +38,30 @@ on:
         description: "If specified, only keep releases since this date (YYYY-MM-DD format)"
         required: false
         type: string
+      git_ref_name:
+        description: "Alternative git ref name to use instead of github.ref_name (useful for workflow_run events)"
+        required: false
+        type: string
 
 jobs:
   release:
     runs-on: "ubuntu-latest"
     steps:
+      - name: Determine effective ref name
+        id: effective_ref
+        run: |
+          if [ -n "$INPUTS_GIT_REF_NAME" ]; then
+            echo "name=$INPUTS_GIT_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          INPUTS_GIT_REF_NAME: ${{ inputs.git_ref_name }}
+          
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+          ref: ${{ steps.effective_ref.outputs.name }}
 
       - uses: actions/setup-node@v4
         with:
@@ -76,7 +92,7 @@ jobs:
         id: distTag
 
       - name: Fail if prerelease on main
-        if: github.ref_name == 'main' && inputs.prerelease
+        if: steps.effective_ref.outputs.name == 'main' && inputs.prerelease
         uses: actions/github-script@v7
         with:
           script: |
@@ -86,7 +102,7 @@ jobs:
         id: prereleaseTag
         # Only run this step if the ref is not main
         # This will allow us to merge a prerelease PR into main and have it release as a normal release
-        if: github.ref_name != 'main'
+        if: steps.effective_ref.outputs.name != 'main'
         run: |
           if [ -n "$INPUTS_PRERELEASE" ]; then
             echo "[INFO] Prerelease input passed in, using: $INPUTS_PRERELEASE"
@@ -94,13 +110,14 @@ jobs:
           elif [ -n "$STEPS_DISTTAG_TAG" ]; then
             echo "[INFO] Prerelease tag found in package.json, using: $STEPS_DISTTAG_TAG"
             echo "tag=$STEPS_DISTTAG_TAG" >> "$GITHUB_OUTPUT"
-          elif [[ "$GITHUB_REF_NAME" =~ ^prerelease/.* ]]; then
+          elif [[ "$EFFECTIVE_REF_NAME" =~ ^prerelease/.* ]]; then
             echo "[INFO] Prerelease branch found but no prerelease tag, using default: dev"
             echo "tag=dev" >> "$GITHUB_OUTPUT"
           fi
         env:
           INPUTS_PRERELEASE: ${{ inputs.prerelease }}
           STEPS_DISTTAG_TAG: ${{ steps.distTag.outputs.tag }}
+          EFFECTIVE_REF_NAME: ${{ steps.effective_ref.outputs.name }}
 
       - name: Generate oclif readme
         if: ${{ inputs.generate-readme }}
@@ -128,6 +145,7 @@ jobs:
           git-user-email: ${{ steps.github-user-info.outputs.email }}
           github-token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           tag-prefix: ""
+          git-branch: ${{ steps.effective_ref.outputs.name }}
           # Use calculated release count if available, otherwise keep all releases (0)
           release-count: ${{ inputs.first-release-date != '' && steps.release-count.outputs.release-count || '0' }}
           skip-on-empty: ${{ inputs.skip-on-empty }}
@@ -145,7 +163,7 @@ jobs:
         with:
           name: ${{ steps.changelog.outputs.tag }}
           tag: ${{ steps.changelog.outputs.tag }}
-          commit: ${{ github.ref_name }}
+          commit: ${{ steps.effective_ref.outputs.name }}
           body: ${{ steps.changelog.outputs.clean_changelog }}
           prerelease: ${{ steps.prereleaseTag.outputs.tag && 'true' || 'false' }}
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}

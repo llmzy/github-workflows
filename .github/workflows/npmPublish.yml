@@ -67,6 +67,11 @@ on:
         type: string
         description: "Scope for the package (e.g., @organization). Required if publishToGithubPackages is true"
         required: false
+      git_ref_name:
+        description: "Alternative git ref name to use instead of github.ref_name (useful for workflow_run events)"
+        required: false
+        type: string
+
 jobs:
   check-publish:
     if: inputs.githubTag != ''
@@ -77,6 +82,17 @@ jobs:
       contents: read
       packages: read
     steps:
+      - name: Determine effective ref name
+        id: effective_ref
+        run: |
+          if [ -n "$INPUTS_GIT_REF_NAME" ]; then
+            echo "name=$INPUTS_GIT_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          INPUTS_GIT_REF_NAME: ${{ inputs.git_ref_name }}
+          
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.githubTag }}
@@ -188,7 +204,7 @@ jobs:
             --npmtag "$INPUTS_TAG" \
             --no-install \
             ${{ inputs.dryrun && '--dryrun' || '' }} \
-            ${{ inputs.prerelease && format('--prerelease {0}', github.ref_name) || '' }} \
+            ${{ inputs.prerelease && format('--prerelease {0}', steps.effective_ref.outputs.name) || '' }} \
             ${{ inputs.sign && '--sign' || '' }}
         env:
           INPUTS_GITHUB_TAG: ${{ inputs.githubTag }}

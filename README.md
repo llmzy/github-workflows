@@ -117,6 +117,45 @@ This fork (`llmzy/github-workflows`) adds several key features and modifications
 - Updated action references to use the fork's repository
 - Maintained compatibility with original workflow structure while adding new features
 
+### Alternative Release Branches
+
+If you use an `on: workflow_run:` trigger in your call chain the
+`create-github-release.yml` will not automatically know which branch you are
+releasing from because this context gets lost (`github.ref_name` will be set
+to 'main'). To work around this, extract the branch name from
+`github.event.workflow_run.head_branch` and pass it to the release or publish
+jobs via the `git_ref_name` parameter:
+
+```yml
+on:
+  workflow_run:
+    workflows: ['Build']
+    types:
+      - completed
+
+jobs:
+  extract-context:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.extract.outputs.branch }}
+    steps:
+      - name: Extract branch name
+        id: extract
+        run: echo "branch=${{ github.event.workflow_run.head_branch || github.ref_name }}" >> $GITHUB_OUTPUT
+
+release:
+    needs: extract-context
+    runs-on: ubuntu-latest
+    uses: llmzy/github-workflows/.github/workflows/create-github-release.yml@main
+    secrets: inherit
+    with:
+      generate-readme: true
+      package-manager: npm
+      git_ref_name: ${{ needs.extract-context.outputs.branch }}
+```
+
+This same approach works for `npmPublish.yml`.
+
 ## Documentation
 
 > [!IMPORTANT]
@@ -171,6 +210,9 @@ jobs:
       # Optional: Path to an existing changelog file to prepend
       # If specified, only one new changelog entry will be prepended to this file
       # input-file: CHANGELOG.md
+      # Optional: Alternative git ref name to use instead of github.ref_name
+      # Useful for workflow_run events where the original ref name might be lost
+      # git_ref_name: "main"
     # you can also pass in values for the secrets
     # secrets:
     #  SVC_CLI_BOT_GITHUB_TOKEN: gh_pat00000000
@@ -210,6 +252,9 @@ jobs:
     with:
       tag: latest
       githubTag: ${{ github.event.release.tag_name }}
+      # Optional: Alternative git ref name to use instead of github.ref_name
+      # Useful for workflow_run events where the original ref name might be lost
+      # git_ref_name: "main"
     secrets: inherit
     # you can also pass in values for the secrets
     # secrets:
@@ -239,11 +284,9 @@ jobs:
 
 ### Plugin Signing
 
-Plugins created by Salesforce teams can be signed automatically with `sign:true` if the repo is in [salesforcecli](https://github.com/salesforcecli) or [forcedotcom](https://github.com/forcedotcom) gitub organization.
+Plugins teams can be signed automatically with `sign:true` if the repo is in [llmzy](https://github.com/llmzy) or [llmzy-skills](https://github.com/llmzy-skills) gitub organization.
 
-You'll need the CLI team to enable your repo for signing. Ask in <https://salesforce-internal.slack.com/archives/C0298EE05PU>
-
-Plugin signing is not available outside of Salesforce. Your users can add your plugin to their allow list (`unsignedPluginAllowList.json`)
+You'll need the CLI team to enable your repo for signing. Open a GitHub issue and tag @jpshack-at-palomar.
 
 ```yml
 on:
