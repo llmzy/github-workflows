@@ -66,6 +66,11 @@ jobs:
           fi
         env:
           INPUTS_GIT_REF_NAME: ${{ inputs.git_ref_name }}
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+          ref: ${{ steps.effective_ref.outputs.name }}
           
       - uses: actions/setup-node@v4
         env:
@@ -75,11 +80,6 @@ jobs:
           cache: ${{ inputs.package-manager }}
           registry-url: ${{ inputs.publishToGithubPackages && 'https://npm.pkg.github.com' || '' }}
           scope: ${{ inputs.scope }}
-
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
-          ref: ${{ steps.effective_ref.outputs.name }}
   
       - name: Install dependencies
         if: inputs.package-manager == 'yarn'
