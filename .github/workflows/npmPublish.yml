@@ -171,7 +171,29 @@ jobs:
         with:
           ref: ${{ inputs.githubTag }}
 
+      - name: Check for .npmrc_ci
+        id: check-npmrc
+        run: |
+          if [ -f .npmrc_ci ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.check-npmrc.outputs.exists == 'true'
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+          cache: ${{ inputs.package-manager }}
+
+      - name: Prepare npmrc
+        if: steps.check-npmrc.outputs.exists == 'true'
+        run: envsubst < .npmrc_ci > .npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        if: steps.check-npmrc.outputs.exists == 'false'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
         with:
