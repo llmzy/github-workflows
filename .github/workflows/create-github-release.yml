@@ -51,6 +51,11 @@ on:
         type: string
         description: "Scope for the package (e.g., @organization). Required if publishToGithubPackages is true"
         required: false
+      version_files:
+        type: string
+        description: "Comma-separated list of package.json files (or other versioned files) to update. Defaults to root ./package.json."
+        required: false
+        default: "./package.json"
   
 jobs:
   release:
@@ -169,6 +174,7 @@ jobs:
           # Note that if input-file is specified, it will be used as the base changelog file
           # and only one new changelog entry will be prepended to it.
           input-file: ${{ inputs.input-file }}
+          version-file: ${{ inputs.version_files }}
 
       - name: Create Github Release
         uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5

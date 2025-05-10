@@ -71,6 +71,11 @@ on:
         description: "Alternative git ref name to use instead of github.ref_name (useful for workflow_run events)"
         required: false
         type: string
+      package-directory:
+        description: "Optional subdirectory where the package to be published is located."
+        required: false
+        type: string
+        default: "."
 
 jobs:
   check-publish:
@@ -92,6 +97,7 @@ jobs:
           fi
         env:
           INPUTS_GIT_REF_NAME: ${{ inputs.git_ref_name }}
+          PACKAGE_DIRECTORY: ${{ inputs.package-directory }}
           
       - uses: actions/checkout@v4
         with:
@@ -106,6 +112,11 @@ jobs:
       - name: Is published
         id: is-published
         run: |
+          effective_package_dir="${INPUTS_PACKAGE_DIRECTORY}"
+          if [ "$effective_package_dir" != "." ] && [ -n "$effective_package_dir" ]; then
+            cd "$effective_package_dir"
+          fi
+
           if [ "$INPUTS_PUBLISH_TO_GITHUB_PACKAGES" = "true" ]; then
             # For GitHub Packages, check if the package exists in the registry
             RESPONSE=$(npm view $INPUTS_SCOPE/$GITHUB_REPOSITORY_NAME@$INPUTS_GITHUB_TAG version --json --silent || echo "Not published")
@@ -126,6 +137,7 @@ jobs:
           INPUTS_SCOPE: ${{ inputs.scope }}
           GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
           NODE_AUTH_TOKEN: ${{ inputs.publishToGithubPackages && secrets.SVC_CLI_BOT_GITHUB_TOKEN || secrets.NPM_TOKEN }}
+          INPUTS_PACKAGE_DIRECTORY: ${{ inputs.package-directory }}
 
       - run: echo "[INFO] Is package published:\ $STEPS_IS_PUBLISHED_PUBLISHED"
         env:
@@ -174,30 +186,44 @@ jobs:
       - name: Check for .npmrc_ci
         id: check-npmrc
         run: |
-          if [ -f .npmrc_ci ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+          # This check assumes .npmrc_ci could be in the sub-directory if one is specified
+          if [ "${{ inputs.package-directory }}" != "." ] && [ -n "${{ inputs.package-directory }}" ]; then
+            if [ -f "${{ inputs.package-directory }}/.npmrc_ci" ]; then
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            if [ -f .npmrc_ci ]; then
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
+        # No working-directory, path is handled in the script
 
       - uses: actions/setup-node@v4
         if: steps.check-npmrc.outputs.exists == 'true'
         with:
           node-version: ${{ inputs.nodeVersion }}
           cache: ${{ inputs.package-manager }}
+        # No working-directory
 
       - name: Prepare npmrc
         if: steps.check-npmrc.outputs.exists == 'true'
         run: envsubst < .npmrc_ci > .npmrc
+        working-directory: ${{ inputs.package-directory }} # If .npmrc_ci is in package-dir, .npmrc created there
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
       - name: Debug npmrc
         if: steps.check-npmrc.outputs.exists == 'true'
         run: cat .npmrc
+        working-directory: ${{ inputs.package-directory }} # If .npmrc is in package-dir
 
       - uses: actions/setup-node@v4
         if: steps.check-npmrc.outputs.exists == 'false'
+        # No working-directory
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
         with:
@@ -208,27 +234,43 @@ jobs:
 
       - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
         if: inputs.package-manager == 'yarn'
+        working-directory: ${{ inputs.package-directory }}
 
       - name: npm install
         if: inputs.package-manager == 'npm'
         run: npm ci
+        working-directory: ${{ inputs.package-directory }}
 
       - name: Build with yarn
         if: inputs.package-manager == 'yarn'
         run: yarn build
+        working-directory: ${{ inputs.package-directory }}
 
       - name: Build with npm
         if: inputs.package-manager == 'npm'
         run: npm run build
+        working-directory: ${{ inputs.package-directory }}
 
       - run: |
-          cp .npmrc ~/.npmrc
+          effective_npmrc_path=".npmrc" # Default to root .npmrc
+          if [ "${{ inputs.package-directory }}" != "." ] && [ -n "${{ inputs.package-directory }}" ]; then
+            if [ -f "${{ inputs.package-directory }}/.npmrc" ]; then # Check if .npmrc was created in package-directory
+              effective_npmrc_path="${{ inputs.package-directory }}/.npmrc"
+            fi
+          fi
+          echo "Copying $effective_npmrc_path to ~/.npmrc"
+          cp "$effective_npmrc_path" ~/.npmrc
           npm install -g @llmzy/release-management
+        # No working-directory for the step itself
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
       - name: NPM Release
         run: |
+          effective_package_dir="${{ inputs.package-directory }}"
+          if [ "$effective_package_dir" != "." ] && [ -n "$effective_package_dir" ]; then
+            cd "$effective_package_dir"
+          fi
           llmzy-release npm:package:release \
             --githubtag "$INPUTS_GITHUB_TAG" \
             --npmtag "$INPUTS_TAG" \
@@ -243,6 +285,7 @@ jobs:
           NPM_REGISTRY: ${{ inputs.publishToGithubPackages && 'https://npm.pkg.github.com' || 'https://registry.npmjs.org/' }}
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          INPUTS_PACKAGE_DIRECTORY: ${{ inputs.package-directory }}
 
       - run: rm ~/.npmrc
 
