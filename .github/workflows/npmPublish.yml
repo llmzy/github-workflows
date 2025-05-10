@@ -232,8 +232,9 @@ jobs:
           registry-url: ${{ inputs.publishToGithubPackages && 'https://npm.pkg.github.com' || '' }}
           scope: ${{ inputs.scope }}
 
-      - uses: llmzy/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - name: Install dependencies
         if: inputs.package-manager == 'yarn'
+        run: yarn install --frozen-lockfile
         working-directory: ${{ inputs.package-directory }}
 
       - name: npm install
