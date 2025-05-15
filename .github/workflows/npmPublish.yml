@@ -97,7 +97,6 @@ jobs:
           fi
         env:
           INPUTS_GIT_REF_NAME: ${{ inputs.git_ref_name }}
-          PACKAGE_DIRECTORY: ${{ inputs.package-directory }}
           
       - uses: actions/checkout@v4
         with:
@@ -112,24 +111,92 @@ jobs:
       - name: Is published
         id: is-published
         run: |
-          effective_package_dir="${INPUTS_PACKAGE_DIRECTORY}"
-          if [ "$effective_package_dir" != "." ] && [ -n "$effective_package_dir" ]; then
+          # This script checks if a specific version of an npm package has
+          # already been published to either npmjs.org or GitHub Packages. It's
+          # designed to work correctly even if the package resides in a
+          # subdirectory of the repository (specified by INPUTS_PACKAGE_DIRECTORY).
+          #
+          # Workflow:
+          # 1. Determine the effective package directory:
+          #    - If INPUTS_PACKAGE_DIRECTORY is provided and is not ".", change
+          #      to that directory.
+          #    - Otherwise, operate from the current directory (repository root).
+          # 2. Store the target version (from INPUTS_GITHUB_TAG) in a variable for clarity.
+          # 3. Check publication status based on the target registry
+          #    (INPUTS_PUBLISH_TO_GITHUB_PACKAGES): 
+          #    a. If targeting GitHub Packages: 
+          #       - Verify that a 'package.json' file exists in the current directory. 
+          #       - Extract the actual package name from 'package.json' 
+          #         (e.g., '@scope/package-name'). This is crucial because the npm 
+          #         package name might differ from the GitHub repository name. 
+          #       - Use 'npm view <actual_package_name>@<version> version --json' to check if  
+          #         the specific version exists in the GitHub Packages registry
+          #         associated with the scope. 
+          #    b. If targeting npmjs.org: 
+          #       - Use 'npm view .@<version> version --json' to check if the specific
+          #         'npm view .@<version> version --json' to check if the specific
+          #         version of the package in the current directory ('.') exists
+          #         on npmjs.org.
+          # 4. Interpret the 'npm view' response:
+          #    - If 'npm view' successfully finds the version, it returns the
+          #      version string (e.g., "1.0.0").
+          #    - If the version is not found, 'npm view' fails, and the script
+          #      captures "Not published".
+          # 5. Compare the response with the target version string (ensuring to
+          #    match the quotes returned by 'npm view --json').
+          # 6. Set the 'published' output variable to "true" or "false" based on
+          #    the comparison. This output is used by subsequent steps in the
+          #    GitHub Actions workflow.
+          
+          # 1. Determine the effective package directory
+          effective_package_dir="${INPUTS_PACKAGE_DIRECTORY:-.}" # Default to . if empty or not set
+          if [ "$effective_package_dir" != "." ]; then
+            echo "Changing to directory: $effective_package_dir"
             cd "$effective_package_dir"
-          fi
-
-          if [ "$INPUTS_PUBLISH_TO_GITHUB_PACKAGES" = "true" ]; then
-            # For GitHub Packages, check if the package exists in the registry
-            RESPONSE=$(npm view $INPUTS_SCOPE/$GITHUB_REPOSITORY_NAME@$INPUTS_GITHUB_TAG version --json --silent || echo "Not published")
           else
-            # For npm, check if the package exists in the npm registry
-            RESPONSE=$(npm view .@$INPUTS_GITHUB_TAG version --json --silent || echo "Not published")
+            echo "Operating in root directory."
           fi
 
-          # The response is wrapped in double quotes, so we need to compare it with (escaped) quotes
-          if [ "$RESPONSE" = "\"$INPUTS_GITHUB_TAG\"" ]; then
+          # 2. Store the target version (from INPUTS_GITHUB_TAG) in a variable for clarity.
+          PACKAGE_VERSION_FROM_INPUT="$INPUTS_GITHUB_TAG"
+
+          # 3. Check publication status based on the target registry
+          # 4. Interpret the 'npm view' response (handled by '|| echo "Not published"' below)
+          if [ "$INPUTS_PUBLISH_TO_GITHUB_PACKAGES" = "true" ]; then
+            # 3a. If targeting GitHub Packages:
+            # For GitHub Packages, read package name from package.json in the
+            # current directory
+            if [ ! -f package.json ]; then
+              echo "Error: package.json not found in $(pwd)"
+              exit 1
+            fi
+            ACTUAL_PACKAGE_NAME=$(node -p "require('./package.json').name")
+            if [ -z "$ACTUAL_PACKAGE_NAME" ]; then
+              echo "Error: Could not extract package name from package.json in $(pwd)"
+              exit 1
+            fi
+            echo "Checking GitHub Packages for: $ACTUAL_PACKAGE_NAME@$PACKAGE_VERSION_FROM_INPUT"
+            # Note: The setup-node action with scope should handle how npm view
+            # resolves names within that scope.
+            RESPONSE=$(npm view "$ACTUAL_PACKAGE_NAME@$PACKAGE_VERSION_FROM_INPUT" version --json --silent || echo "Not published")
+          else
+            # 3b. If targeting npmjs.org:
+            # For npm, check if the package exists in the npm registry using
+            # local package.json context
+            echo "Checking npmjs.org for package in current directory with version: $PACKAGE_VERSION_FROM_INPUT"
+            RESPONSE=$(npm view ".@$PACKAGE_VERSION_FROM_INPUT" version --json --silent || echo "Not published")
+          fi
+
+          # 5. Compare the response with the target version string
+          # The response from `npm view ... version --json` is the version
+          # string itself, e.g., "1.2.3" (with quotes).          
+          # 6. Set the 'published' output variable          
+          if [ "$RESPONSE" = "\"\"$PACKAGE_VERSION_FROM_INPUT\"\"" ]; then # Compare with quoted version string            
             echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "Package version $PACKAGE_VERSION_FROM_INPUT found."
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "Package version $PACKAGE_VERSION_FROM_INPUT not found. npm view response: $RESPONSE"
           fi
         env:
           INPUTS_GITHUB_TAG: ${{ inputs.githubTag }}
@@ -186,19 +253,12 @@ jobs:
       - name: Check for .npmrc_ci
         id: check-npmrc
         run: |
-          # This check assumes .npmrc_ci could be in the sub-directory if one is specified
-          if [ "${{ inputs.package-directory }}" != "." ] && [ -n "${{ inputs.package-directory }}" ]; then
-            if [ -f "${{ inputs.package-directory }}/.npmrc_ci" ]; then
-              echo "exists=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-            fi
+          if [ -f .npmrc_ci ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo ".npmrc_ci found at root."
           else
-            if [ -f .npmrc_ci ]; then
-              echo "exists=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-            fi
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo ".npmrc_ci not found at root."
           fi
         # No working-directory, path is handled in the script
 
@@ -212,14 +272,16 @@ jobs:
       - name: Prepare npmrc
         if: steps.check-npmrc.outputs.exists == 'true'
         run: envsubst < .npmrc_ci > .npmrc
-        working-directory: ${{ inputs.package-directory }} # If .npmrc_ci is in package-dir, .npmrc created there
+        # working-directory: ${{ inputs.package-directory }} # Removed,
+        # .npmrc_ci and .npmrc at root
         env:
           NODE_AUTH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
 
       - name: Debug npmrc
         if: steps.check-npmrc.outputs.exists == 'true'
         run: cat .npmrc
-        working-directory: ${{ inputs.package-directory }} # If .npmrc is in package-dir
+        # working-directory: ${{ inputs.package-directory }} # Removed, .npmrc
+        # is at root
 
       - uses: actions/setup-node@v4
         if: steps.check-npmrc.outputs.exists == 'false'
@@ -235,32 +297,35 @@ jobs:
       - name: Install dependencies
         if: inputs.package-manager == 'yarn'
         run: yarn install --frozen-lockfile
-        working-directory: ${{ inputs.package-directory }}
+        # working-directory: ${{ inputs.package-directory }} # Removed, install
+        # at root
 
       - name: npm install
         if: inputs.package-manager == 'npm'
         run: npm ci
-        working-directory: ${{ inputs.package-directory }}
+        # working-directory: ${{ inputs.package-directory }} # Removed, install
+        # at root
 
       - name: Build with yarn
         if: inputs.package-manager == 'yarn'
         run: yarn build
-        working-directory: ${{ inputs.package-directory }}
+        # working-directory: ${{ inputs.package-directory }} # Removed, build
+        # from root
 
       - name: Build with npm
         if: inputs.package-manager == 'npm'
         run: npm run build
-        working-directory: ${{ inputs.package-directory }}
+        # working-directory: ${{ inputs.package-directory }} # Removed, build
+        # from root
 
       - run: |
-          effective_npmrc_path=".npmrc" # Default to root .npmrc
-          if [ "${{ inputs.package-directory }}" != "." ] && [ -n "${{ inputs.package-directory }}" ]; then
-            if [ -f "${{ inputs.package-directory }}/.npmrc" ]; then # Check if .npmrc was created in package-directory
-              effective_npmrc_path="${{ inputs.package-directory }}/.npmrc"
-            fi
+          # .npmrc is expected to be at the root now if it was created
+          if [ -f .npmrc ]; then
+            echo "Copying .npmrc from root to ~/.npmrc"
+            cp .npmrc ~/.npmrc
+          else
+            echo ".npmrc not found at root. Global npmrc will be used or setup-node config."
           fi
-          echo "Copying $effective_npmrc_path to ~/.npmrc"
-          cp "$effective_npmrc_path" ~/.npmrc
           npm install -g @llmzy/release-management
         # No working-directory for the step itself
         env:
@@ -268,9 +333,12 @@ jobs:
 
       - name: NPM Release
         run: |
-          effective_package_dir="${{ inputs.package-directory }}"
+          effective_package_dir="${INPUTS_PACKAGE_DIRECTORY:-.}" # Default to .
           if [ "$effective_package_dir" != "." ] && [ -n "$effective_package_dir" ]; then
+            echo "Changing to directory for release: $effective_package_dir"
             cd "$effective_package_dir"
+          else
+            echo "Releasing from root directory."
           fi
           llmzy-release npm:package:release \
             --githubtag "$INPUTS_GITHUB_TAG" \
